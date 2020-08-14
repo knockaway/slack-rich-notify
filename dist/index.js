@@ -51289,15 +51289,14 @@ async function run() {
     core.setSecret(signingSecret);
 
     // turn our eval strings into actionable commands
-    const evals = evalStrings
-      ? evalStrings.split(/\n+/g).reduce((a, e) => {
-          const [saveAs, ...cmd] = e.split(/=/g);
-          return {
-            ...a,
-            [saveAs.trim()]: cmd.join("=").trim(),
-          };
-        }, {})
-      : {};
+    const evals = {};
+    if (evalStrings) {
+      const parts = evalStrings.split(/\n+/g);
+      for (const part of parts) {
+        const [saveAs, ...cmd] = part.split(/=/g);
+        evals[saveAs.trim()] = cmd.join("=").trim();
+      }
+    }
 
     const data = {
       inputs: {
