@@ -18,9 +18,9 @@ async function run() {
     const token = core.getInput("token");
     const signingSecret = core.getInput("secret");
     const channel = core.getInput("channel");
-    const raw = core.getInput("raw") === "true";
-    const dry = core.getInput("dry-run") === "true";
-    const dump = core.getInput("dump") === "true";
+    const outputRawMessage = core.getInput("raw") === "true";
+    const dryRun = core.getInput("dry-run") === "true";
+    const dumpContext = core.getInput("dump") === "true";
     const message = core.getInput("message");
     const evalStrings = core.getInput("evals") || "";
     const context = github.context;
@@ -42,7 +42,7 @@ async function run() {
     const data = {
       inputs: {
         channel,
-        raw,
+        raw: outputRawMessage,
         message,
       },
       context,
@@ -50,9 +50,9 @@ async function run() {
       evals: {},
     };
 
-    for (const e of Object.keys(evals)) {
+    for (const key of Object.keys(evals)) {
       // from https://github.com/actions/toolkit/tree/master/packages/exec
-      const command = Handlebars.compile(evals[e], hbOptions)(data);
+      const command = Handlebars.compile(evals[key], hbOptions)(data);
       const results = { out: "", err: "" };
       core.debug("Evaluating " + command);
       await exec.exec(command, [], {
@@ -72,7 +72,7 @@ async function run() {
       if (results.err) {
         throw new Error(results.err);
       } else {
-        data.evals[e] = results.out;
+        data.evals[key] = results.out;
       }
     }
 
@@ -80,24 +80,21 @@ async function run() {
     core.debug(JSON.stringify(data));
 
     let formattedMessage = message;
-    if (!raw) {
+    if (outputRawMessage === false) {
       core.debug("formatting message:");
       core.debug(message);
       formattedMessage = Handlebars.compile(message, hbOptions)(data);
-    } else {
-      core.debug("Raw enabled, skipping message formatting");
-      formattedMessage = raw;
     }
 
     core.debug("Message to send:");
     core.debug(formattedMessage);
 
-    if (dump) {
+    if (dumpContext === true) {
       console.log("--- DUMPED CONTEXT ---");
       console.log(JSON.stringify(data, null, 2));
     }
 
-    if (dry) {
+    if (dryRun === true) {
       console.log("--- DRY RUN ---");
       console.log(formattedMessage);
       console.log("--- NO SLACK MESSAGES SENT ---");
