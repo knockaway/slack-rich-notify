@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "eslint index.js",
     "package": "ncc build index.js -o dist",
-    "test": "eslint index.js && echo \"yolo\" && exit 0",
+    "test": "eslint index.js && tap",
     "---": "echo \"--- Utility Scripts ---\"",
     "commit:pkg": "npm run package && git add dist",
     "commit:cz": "exec < /dev/tty && git-cz --hook || true",
@@ -44,7 +44,8 @@
     "eslint": "^7.6.0",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
-    "prettier": "^2.0.5"
+    "prettier": "^2.0.5",
+    "tap": "^14.10.8"
   },
   "husky": {
     "hooks": {

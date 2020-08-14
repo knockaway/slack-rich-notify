@@ -4,6 +4,7 @@ const Handlebars = require("handlebars");
 const { App } = require("@slack/bolt");
 const exec = require("@actions/exec");
 const hbh = require("./handlebars-helpers");
+const parseEvalStrings = require("./lib/parse-eval-strings");
 
 hbh(Handlebars);
 
@@ -30,14 +31,7 @@ async function run() {
     core.setSecret(signingSecret);
 
     // turn our eval strings into actionable commands
-    const evals = {};
-    if (evalStrings) {
-      const parts = evalStrings.split(/\n+/g);
-      for (const part of parts) {
-        const [saveAs, ...cmd] = part.split(/=/g);
-        evals[saveAs.trim()] = cmd.join("=").trim();
-      }
-    }
+    const evals = parseEvalStrings(evalStrings);
 
     const data = {
       inputs: {

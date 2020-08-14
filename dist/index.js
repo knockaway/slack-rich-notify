@@ -1370,7 +1370,29 @@ module.exports = (
 
 
 /***/ }),
-/* 15 */,
+/* 15 */
+/***/ (function(module) {
+
+"use strict";
+
+
+module.exports = function parseEvalStrings(input = "") {
+  const result = {};
+
+  if (typeof input !== "string" || input === "") {
+    return result;
+  }
+
+  for (const string of input.split(/\n+/g)) {
+    const [varName, ...cmd] = string.split(/=/g);
+    result[varName.trim()] = cmd.join("=").trim();
+  }
+
+  return result;
+};
+
+
+/***/ }),
 /* 16 */
 /***/ (function(module) {
 
@@ -51238,6 +51260,7 @@ const Handlebars = __webpack_require__(492);
 const { App } = __webpack_require__(311);
 const exec = __webpack_require__(514);
 const hbh = __webpack_require__(982);
+const parseEvalStrings = __webpack_require__(15);
 
 hbh(Handlebars);
 
@@ -51264,14 +51287,7 @@ async function run() {
     core.setSecret(signingSecret);
 
     // turn our eval strings into actionable commands
-    const evals = {};
-    if (evalStrings) {
-      const parts = evalStrings.split(/\n+/g);
-      for (const part of parts) {
-        const [saveAs, ...cmd] = part.split(/=/g);
-        evals[saveAs.trim()] = cmd.join("=").trim();
-      }
-    }
+    const evals = parseEvalStrings(evalStrings);
 
     const data = {
       inputs: {
