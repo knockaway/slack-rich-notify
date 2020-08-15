@@ -1,0 +1,6 @@
+esm: false
+jsx: false
+ts: false
+
+files:
+  - 'lib/**/*.test.js'
