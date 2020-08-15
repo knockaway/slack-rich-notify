@@ -51414,6 +51414,7 @@ async function main() {
   const result = await app.client.chat.postMessage({
     token: actionInputs.token,
     channel: actionInputs.channel,
+    mrkdwn: true,
     text: formattedMessage,
   });
 
