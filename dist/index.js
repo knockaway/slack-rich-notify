@@ -13916,7 +13916,36 @@ function wrapHelper(helper, transformOptionsFn) {
 
 /***/ }),
 /* 269 */,
-/* 270 */,
+/* 270 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+/*
+ * Copyright © 2018 Atomist, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(928));
+var Markdown_1 = __webpack_require__(742);
+exports.githubToSlack = Markdown_1.githubToSlack;
+//# sourceMappingURL=index.js.map
+
+/***/ }),
 /* 271 */
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -33111,7 +33140,48 @@ exports.IndexedSourceMapConsumer = IndexedSourceMapConsumer;
 /***/ }),
 /* 607 */,
 /* 608 */,
-/* 609 */,
+/* 609 */
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+/*
+ * Copyright © 2018 Atomist, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Perform transformations on input string, skipping sections that match
+ * the regular expression.
+ *
+ * @param text input string
+ * @param splitter a regular expression to split the string
+ * @param transform function that takes non-skipped sections as input
+ *                  and performs transformation
+ * @return transformed string, stitched back together
+ */
+function splitProcessor(text, transform, splitter) {
+    const hunks = text.split(splitter);
+    for (let i = 0; i < hunks.length; i += 2) {
+        hunks[i] = transform(hunks[i]);
+    }
+    return hunks.join("");
+}
+exports.splitProcessor = splitProcessor;
+//# sourceMappingURL=splitProcessor.js.map
+
+/***/ }),
 /* 610 */,
 /* 611 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -37592,9 +37662,14 @@ function clean(key)
 
 
 const Handlebars = __webpack_require__(618);
+const { githubToSlack } = __webpack_require__(270);
 
 Handlebars.registerHelper("cut", (s, len) => {
   return new Handlebars.SafeString(`${s}`.substring(0, len));
+});
+
+Handlebars.registerHelper("githubToSlack", (input) => {
+  return githubToSlack(input);
 });
 
 module.exports = {
@@ -39618,7 +39693,175 @@ for (var i = 0; i < modules.length; i++) {
 /* 739 */,
 /* 740 */,
 /* 741 */,
-/* 742 */,
+/* 742 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+/*
+ * Copyright © 2018 Atomist, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const splitProcessor_1 = __webpack_require__(609);
+/**
+ * Try to handle adjacent HTML and Markdown elements that cannot be
+ * adjacent in Slack markup.  Used as the function argument of
+ * replace.
+ *
+ * @param match the full match
+ * @param url the URL
+ * @param space trailing space, if it exists
+ * @return properly padded replacement string
+ */
+function trailingSpace(match, url, space, offset, full) {
+    const pad = (offset + match.length === full.length) ? "" : " ";
+    return (space) ? url + space : url + pad;
+}
+/**
+ * Replace named Markdown links with parenthesized links.
+ *
+ * @param text string which may have named Markdown links
+ * @return string with explicit links
+ */
+function convertNamedLinks(text) {
+    const namedLinksRegExp = /^\[(.+?)\]:\s*(https?:\/\/\S+).*\n/mg;
+    let matches;
+    const links = {};
+    // tslint:disable-next-line:no-conditional-assignment
+    while (matches = namedLinksRegExp.exec(text)) {
+        const name = matches[1];
+        const url = matches[2];
+        links[name] = url;
+    }
+    let linked = text;
+    for (const n in links) {
+        if (links.hasOwnProperty(n)) {
+            const u = links[n];
+            const nameRegExp = new RegExp(`\\[(.+?)\\]\\[${n}\\]|\\[${n}\\]\\[\\]`, "g");
+            linked = linked.replace(nameRegExp, (m, ln) => {
+                const linkName = (ln) ? ln : n;
+                return `[${linkName}](${u})`;
+            });
+        }
+    }
+    return linked.replace(namedLinksRegExp, "");
+}
+exports.convertNamedLinks = convertNamedLinks;
+/**
+ * Replace <img> tags with just the image URL.
+ *
+ * @param text string which may have img tags
+ * @return string with img tags replaced
+ */
+function convertInlineImages(text) {
+    const regex = /(?:&lt;|<)img\s[\S\s]*?\bsrc="(\S+?)"[\S\s]*?(?:&gt;|>)(\s?)/g;
+    return text.replace(regex, trailingSpace);
+}
+exports.convertInlineImages = convertInlineImages;
+/**
+ * Replace Markdown image links with just the image URL.
+ *
+ * @param text string with Markdown
+ * @return string with image URLs
+ */
+function convertImageLinks(text) {
+    return text.replace(/!\[.*?\]\((.+?)\)(\s?)/g, trailingSpace);
+}
+exports.convertImageLinks = convertImageLinks;
+/**
+ * Replace Markdown links with Slack markup links.
+ *
+ * @param text string with Markdown
+ * @return string with Slack markup
+ */
+function convertLinks(text) {
+    return text.replace(/\[(.+?)\]\((.+?)\)/g, "<$2|$1>");
+}
+exports.convertLinks = convertLinks;
+/**
+ * Replace Markdown bold, italic, and unordered lists with their Slack
+ * markup equivalent.
+ *
+ * @param text string with Markdown
+ * @return string with Slack markup
+ */
+function convertFormat(text) {
+    return text.replace(/^(\s*)[-*](\s+)/mg, "$1•$2")
+        .replace(/(\*|_)\1(\S|\S.*?\S)\1\1(?!\1)/g, "<bdmkd>$2<bdmkd>")
+        .replace(/(\*|_)(?!\1)(\S|\S.*?\S)\1(?!\1)/g, "<itmkd>$2<itmkd>")
+        .replace(/<bdmkd>/g, "*")
+        .replace(/<itmkd>/g, "_");
+}
+exports.convertFormat = convertFormat;
+/**
+ * Convert sections of text from GitHub-flavored Markdown to Slack
+ * message markup.  This function should not be passed inline code or
+ * code blocks.  The ordering of the functions called is significant.
+ *
+ * @param text string containing Markdown
+ * @return string converted to Slack markup
+ */
+function convertMarkdown(text) {
+    const relinked = convertLinks(convertImageLinks(convertInlineImages(convertNamedLinks(text))));
+    const urlSplitter = /(<.*>|https?:\/\/\S+)/g;
+    return splitProcessor_1.splitProcessor(relinked, convertFormat, urlSplitter);
+}
+/** Provide a unique identifier for later replacement. */
+function codeTag(i) {
+    return `%.%CODE_PROCESSOR_CODE${i}%.%`;
+}
+/**
+ * Transform everything but the interior of inline code segments,
+ * i.e., \`code\`, but still be able to process elements that wrap
+ * around inlide code formatting.
+ *
+ * @param text input string
+ * @param transform function that takes the whole string with inline
+ *                  code segments "hidden" and performs transformation
+ * @return transformed string with unchanged inline code segments
+ */
+function codeProcessor(text) {
+    const hunks = text.split(/(`.*?`)/);
+    const codes = new Array(hunks.length);
+    for (let i = 1; i < hunks.length; i += 2) {
+        codes[i] = hunks[i];
+        hunks[i] = codeTag(i);
+    }
+    const transformed = convertMarkdown(hunks.join(""));
+    let restored = transformed;
+    for (let i = 1; i < hunks.length; i += 2) {
+        restored = restored.replace(codeTag(i), codes[i]);
+    }
+    return restored;
+}
+/**
+ * Convert GitHub-flavored Markdown to Slack message markup.  This is
+ * not a complete implementation of a Markdown parser, but it does its
+ * level best.
+ *
+ * @param text string containing markdown
+ * @return string with Slack markup
+ */
+function githubToSlack(text) {
+    const codeBlock = /(```[\S\s]*?```(?!`))/g;
+    return splitProcessor_1.splitProcessor(text, codeProcessor, codeBlock);
+}
+exports.githubToSlack = githubToSlack;
+//# sourceMappingURL=Markdown.js.map
+
+/***/ }),
 /* 743 */
 /***/ (function(module) {
 
@@ -51325,7 +51568,175 @@ function removeHook (state, name, method) {
 /* 925 */,
 /* 926 */,
 /* 927 */,
-/* 928 */,
+/* 928 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+/*
+ * Copyright © 2018 Atomist, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const splitProcessor_1 = __webpack_require__(609);
+/**
+ * Helper constants for the MIME types the Slack message API accepts.
+ */
+exports.MessageMimeTypes = {
+    SlackJson: "application/x-atomist-slack+json",
+    SlackFileJson: "application/x-atomist-slack-file+json",
+    PlainText: "text/plain",
+    ApplicationJson: "application/json",
+};
+/**
+ * Construct and render slack messages according to Slack message
+ * formatting: https://api.slack.com/docs/message-formatting. Customize
+ * messages with rug actions.
+ */
+/**
+ * Encode special Slack characters and HTML entities.
+ */
+function escape(text) {
+    if (text) {
+        const entify = (i) => i.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const htmlEntities = /(&(?:\w+|#\d+);)/;
+        return splitProcessor_1.splitProcessor(text, entify, htmlEntities);
+    }
+    else {
+        return "";
+    }
+}
+exports.escape = escape;
+/**
+ * Constructs slack link.
+ * Label is automatically escaped.
+ */
+function url(fullUrl, label) {
+    if (fullUrl && label) {
+        return `<${fullUrl}|${escape(label)}>`;
+    }
+    else if (fullUrl) {
+        return `<${fullUrl}>`;
+    }
+    else {
+        return "";
+    }
+}
+exports.url = url;
+/**
+ * Mentions user (e.g. @anna).
+ * When userName is provided will add readable user name.
+ *
+ * @param userId Slack user ID
+ * @param userName alternative user name, which Slack seems to ignore
+ * @return properly formatted Slack user mention
+ */
+function user(userId, userName) {
+    if (userId && userName) {
+        return `<@${userId}|${userName}>`;
+    }
+    else if (userId) {
+        return `<@${userId}>`;
+    }
+    else {
+        return "";
+    }
+}
+exports.user = user;
+/**
+ * Mentions channel (e.g. #general).
+ * Will mention specific channel by channelId.
+ * When channelName is provided will add readable channel name.
+ */
+function channel(channelId, channelName) {
+    if (channelId && channelName) {
+        return `<#${channelId}|${channelName}>`;
+    }
+    else if (channelId) {
+        return `<#${channelId}>`;
+    }
+    else {
+        return "";
+    }
+}
+exports.channel = channel;
+/** Mentions @channel */
+function atChannel() {
+    return "<!channel>";
+}
+exports.atChannel = atChannel;
+/** Mentions here (@here) */
+function atHere() {
+    return "<!here>";
+}
+exports.atHere = atHere;
+/** Mentions everyone (@everyone) */
+function atEveryone() {
+    return "<!everyone>";
+}
+exports.atEveryone = atEveryone;
+/** Renders JSON representation of slack message. */
+function render(message, pretty = false) {
+    if (message.attachments && message.attachments.length > 0) {
+        let idx = 1;
+        message.attachments.forEach(att => {
+            if (att.actions && att.actions.length > 0 && !att.callback_id) {
+                att.callback_id = `cllbck${idx++}`;
+            }
+        });
+    }
+    return JSON.stringify(message, undefined, pretty ? 4 : 0);
+}
+exports.render = render;
+/** Render emoji by name */
+function emoji(name) {
+    return (name) ? `:${name}:` : "";
+}
+exports.emoji = emoji;
+/** Render bold text */
+function bold(text) {
+    return (text) ? `*${text}*` : "";
+}
+exports.bold = bold;
+/** Render italic text */
+function italic(text) {
+    return (text) ? `_${text}_` : "";
+}
+exports.italic = italic;
+/** Render strike-through text */
+function strikethrough(text) {
+    return (text) ? `~${text}~` : "";
+}
+exports.strikethrough = strikethrough;
+/** Render single line code block */
+function codeLine(text) {
+    return (text) ? "`" + text + "`" : "";
+}
+exports.codeLine = codeLine;
+/** Render multiline code block */
+function codeBlock(text) {
+    return (text) ? "```" + text + "```" : "";
+}
+exports.codeBlock = codeBlock;
+/** Render bullet list item */
+function listItem(item) {
+    return (item) ? `• ${item}` : "";
+}
+exports.listItem = listItem;
+//# sourceMappingURL=SlackMessages.js.map
+
+/***/ }),
 /* 929 */,
 /* 930 */,
 /* 931 */,
