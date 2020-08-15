@@ -188,3 +188,9 @@ $ git push origin v(x)
 Your action is now published! :rocket:
 
 See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
+
+## Useful links
+
+- https://api.slack.com/reference/surfaces/formatting#basics
+- https://api.slack.com/methods/chat.postMessage
+- https://api.slack.com/reference/block-kit/blocks#section
