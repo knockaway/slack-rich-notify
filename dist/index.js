@@ -42448,7 +42448,7 @@ module.exports = async function renderEvals({
 } = {}) {
   const renderedEvals = {};
 
-  for (const key of evals) {
+  for (const key of Object.keys(evals)) {
     const template = templater.compile(evals[key]);
     const command = template(templateData);
     const results = { out: "", err: "" };
