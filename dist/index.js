@@ -5984,7 +5984,12 @@ module.exports = safer
 
 
 /***/ }),
-/* 119 */,
+/* 119 */
+/***/ (function(module) {
+
+module.exports = {"name":"slack-rich-notify","private":true,"version":"2.0.1","description":"A Github Action for Slack with markdown, multiline messages, and variables","author":"Aibex, Inc <oss@aibex.com>","license":"MIT","main":"index.js","scripts":{"lint":"eslint index.js","package":"ncc build index.js -o dist","test":"eslint index.js && tap","---":"echo \"--- Utility Scripts ---\"","commit:pkg":"npm run package && git add dist","commit:cz":"exec < /dev/tty && git-cz --hook || true","lint-staged":"lint-staged --shell"},"repository":{"type":"git","url":"git+https://github.com/aibexhq/slack-rich-notify.git"},"keywords":["GitHub","Actions","JavaScript"],"bugs":{"url":"https://github.com/aibexhq/slack-rich-notify/issues"},"homepage":"https://github.com/aibexhq/slack-rich-notify#readme","dependencies":{"@actions/core":"^1.2.4","@actions/exec":"^1.0.4","@actions/github":"^4.0.0","@atomist/slack-messages":"^1.1.1","@slack/bolt":"^2.2.3","handlebars":"^4.7.6"},"devDependencies":{"@vercel/ncc":"^0.23.0","commitizen":"^4.1.2","commitlint-config-gitmoji":"^1.0.1","conventional-changelog-conventionalcommits":"^4.4.0","cz-emoji":"^1.2.2","eslint":"^7.6.0","husky":"^4.2.5","lint-staged":"^10.2.11","prettier":"^2.0.5","tap":"^14.10.8"},"husky":{"hooks":{"pre-commit":"npm run commit:pkg && npm run lint-staged --shell","post-commit":"git update-index --again","prepare-commit-msg":"if [ -t 1 ] ; then npm run commit:cz; fi"}}};
+
+/***/ }),
 /* 120 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -51746,6 +51751,7 @@ exports.listItem = listItem;
 "use strict";
 
 
+const path = __webpack_require__(622);
 const core = __webpack_require__(186);
 const github = __webpack_require__(438);
 const { App } = __webpack_require__(311);
@@ -51753,6 +51759,18 @@ const log = __webpack_require__(228);
 const parseEvalStrings = __webpack_require__(15);
 const renderEvals = __webpack_require__(777);
 const renderMessage = __webpack_require__(363);
+
+const messageTemplate = `
+New deployment triggered 🚀
+
+*Service:* {{locals.serviceName}}
+*PR:* <{{context.payload.pull_request.url}}|#{{context.payload.number}}>
+*Title:* {{githubToSlack context.payload.pull_request.title}}
+{{#if context.payload.pull_request.body}}
+*Body:*
+> {{githubToSlack context.payload.pull_request.body}}
+{{/if}}
+`;
 
 const actionInputs = {
   token: core.getInput("token"),
@@ -51785,7 +51803,11 @@ async function main() {
     context: github.context,
     env: process.env,
     evals: {},
+    locals: {},
   };
+
+  const repoPKG = __webpack_require__(119);
+  templateData.locals.serviceName = repoPKG.name;
 
   const evals = parseEvalStrings(actionInputs.evalStrings);
   templateData.evals = await renderEvals({ evals, templateData });
@@ -51793,10 +51815,11 @@ async function main() {
   log.debug("Final message data");
   log.debug(JSON.stringify(templateData));
 
-  let formattedMessage = actionInputs.message;
+  let formattedMessage =
+    actionInputs.message !== "" ? actionInputs.message : messageTemplate;
   if (actionInputs.outputRawMessage === false) {
     formattedMessage = renderMessage({
-      messageTemplate: actionInputs.message,
+      messageTemplate: formattedMessage,
       templateData,
     });
   }
