@@ -5984,12 +5984,7 @@ module.exports = safer
 
 
 /***/ }),
-/* 119 */
-/***/ (function(module) {
-
-module.exports = {"name":"slack-rich-notify","private":true,"version":"2.0.1","description":"A Github Action for Slack with markdown, multiline messages, and variables","author":"Aibex, Inc <oss@aibex.com>","license":"MIT","main":"index.js","scripts":{"lint":"eslint index.js","package":"ncc build index.js -o dist","test":"eslint index.js && tap","---":"echo \"--- Utility Scripts ---\"","commit:pkg":"npm run package && git add dist","commit:cz":"exec < /dev/tty && git-cz --hook || true","lint-staged":"lint-staged --shell"},"repository":{"type":"git","url":"git+https://github.com/aibexhq/slack-rich-notify.git"},"keywords":["GitHub","Actions","JavaScript"],"bugs":{"url":"https://github.com/aibexhq/slack-rich-notify/issues"},"homepage":"https://github.com/aibexhq/slack-rich-notify#readme","dependencies":{"@actions/core":"^1.2.4","@actions/exec":"^1.0.4","@actions/github":"^4.0.0","@atomist/slack-messages":"^1.1.1","@slack/bolt":"^2.2.3","handlebars":"^4.7.6"},"devDependencies":{"@vercel/ncc":"^0.23.0","commitizen":"^4.1.2","commitlint-config-gitmoji":"^1.0.1","conventional-changelog-conventionalcommits":"^4.4.0","cz-emoji":"^1.2.2","eslint":"^7.6.0","husky":"^4.2.5","lint-staged":"^10.2.11","prettier":"^2.0.5","tap":"^14.10.8"},"husky":{"hooks":{"pre-commit":"npm run commit:pkg && npm run lint-staged --shell","post-commit":"git update-index --again","prepare-commit-msg":"if [ -t 1 ] ; then npm run commit:cz; fi"}}};
-
-/***/ }),
+/* 119 */,
 /* 120 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -51773,6 +51768,7 @@ New deployment triggered 🚀
 `;
 
 const actionInputs = {
+  workDir: core.getInput("workDir"),
   token: core.getInput("token"),
   signingSecret: core.getInput("secret"),
   channel: core.getInput("channel"),
@@ -51806,8 +51802,13 @@ async function main() {
     locals: {},
   };
 
-  const repoPKG = __webpack_require__(119);
-  templateData.locals.serviceName = repoPKG.name;
+  try {
+    const pkgPath = path.join(actionInputs.workDir, "package.json");
+    const repoPKG = require(pkgPath);
+    templateData.locals.serviceName = repoPKG.name;
+  } catch (e) {
+    log.error(e.message);
+  }
 
   const evals = parseEvalStrings(actionInputs.evalStrings);
   templateData.evals = await renderEvals({ evals, templateData });

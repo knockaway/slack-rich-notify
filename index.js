@@ -22,6 +22,7 @@ New deployment triggered 🚀
 `;
 
 const actionInputs = {
+  workDir: core.getInput("workDir"),
   token: core.getInput("token"),
   signingSecret: core.getInput("secret"),
   channel: core.getInput("channel"),
@@ -55,8 +56,13 @@ async function main() {
     locals: {},
   };
 
-  const repoPKG = require(path.join(process.cwd(), "package.json"));
-  templateData.locals.serviceName = repoPKG.name;
+  try {
+    const pkgPath = path.join(actionInputs.workDir, "package.json");
+    const repoPKG = require(pkgPath);
+    templateData.locals.serviceName = repoPKG.name;
+  } catch (e) {
+    log.error(e.message);
+  }
 
   const evals = parseEvalStrings(actionInputs.evalStrings);
   templateData.evals = await renderEvals({ evals, templateData });
