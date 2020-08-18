@@ -1,5 +1,6 @@
 "use strict";
 
+const path = require("path");
 const core = require("@actions/core");
 const github = require("@actions/github");
 const { App } = require("@slack/bolt");
@@ -8,7 +9,20 @@ const parseEvalStrings = require("./lib/parse-eval-strings");
 const renderEvals = require("./lib/render-evals");
 const renderMessage = require("./lib/render-message");
 
+const messageTemplate = `
+New deployment triggered 🚀
+
+*Service:* {{locals.serviceName}}
+*PR:* <{{context.payload.pull_request.url}}|#{{context.payload.number}}>
+*Title:* {{githubToSlack context.payload.pull_request.title}}
+{{#if context.payload.pull_request.body}}
+*Body:*
+> {{githubToSlack context.payload.pull_request.body}}
+{{/if}}
+`;
+
 const actionInputs = {
+  workDir: core.getInput("workDir"),
   token: core.getInput("token"),
   signingSecret: core.getInput("secret"),
   channel: core.getInput("channel"),
@@ -39,7 +53,16 @@ async function main() {
     context: github.context,
     env: process.env,
     evals: {},
+    locals: {},
   };
+
+  try {
+    const pkgPath = path.join(actionInputs.workDir, "package.json");
+    const repoPKG = require(pkgPath);
+    templateData.locals.serviceName = repoPKG.name;
+  } catch (e) {
+    log.error(e.message);
+  }
 
   const evals = parseEvalStrings(actionInputs.evalStrings);
   templateData.evals = await renderEvals({ evals, templateData });
@@ -47,10 +70,11 @@ async function main() {
   log.debug("Final message data");
   log.debug(JSON.stringify(templateData));
 
-  let formattedMessage = actionInputs.message;
+  let formattedMessage =
+    actionInputs.message !== "" ? actionInputs.message : messageTemplate;
   if (actionInputs.outputRawMessage === false) {
     formattedMessage = renderMessage({
-      messageTemplate: actionInputs.message,
+      messageTemplate: formattedMessage,
       templateData,
     });
   }
