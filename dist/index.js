@@ -51763,7 +51763,7 @@ New deployment triggered 🚀
 *Title:* {{githubToSlack context.payload.pull_request.title}}
 {{#if context.payload.pull_request.body}}
 *Body:*
-> {{githubToSlack context.payload.pull_request.body}}
+{{githubToSlack context.payload.pull_request.body}}
 {{/if}}
 `;
 
