@@ -13,7 +13,7 @@ const messageTemplate = `
 New deployment triggered 🚀
 
 *Service:* {{locals.serviceName}}
-*PR:* <{{context.payload.pull_request.url}}|#{{context.payload.number}}>
+*PR:* <{{context.payload.pull_request.html_url}}|#{{context.payload.number}}>
 *Title:* {{githubToSlack context.payload.pull_request.title}}
 {{#if context.payload.pull_request.body}}
 *Body:*
