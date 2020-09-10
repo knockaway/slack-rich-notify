@@ -14,7 +14,7 @@ New deployment triggered 🚀
 
 *Service:* {{locals.serviceName}}
 *PR:* <{{context.payload.pull_request.html_url}}|#{{context.payload.number}}>
-*Merged By:* {{context.payload.pull_request.sender.login}}
+*Merged By:* {{context.payload.sender.login}}
 *Title:* {{githubToSlack context.payload.pull_request.title}}
 {{#if context.payload.pull_request.body}}
 *Body:*
